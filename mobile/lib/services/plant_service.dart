@@ -10,13 +10,11 @@ class PlantService {
   static String get _base {
     if (kIsWeb) {
       final origin = Uri.base.origin;
-      // In dev (localhost), forward to the local backend
       if (origin.contains('localhost') || origin.contains('127.0.0.1')) {
         return 'http://localhost:8000';
       }
-      return origin; // Production: same host serves the API
     }
-    return 'https://plant-scanner-d8hg.onrender.com'; // APK production URL
+    return 'https://plant-scanner-d8hg.onrender.com';
   }
 
   static Future<Plant> identify(XFile imageFile) async {

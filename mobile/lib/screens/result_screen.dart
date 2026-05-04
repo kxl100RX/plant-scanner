@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/plant.dart';
 
@@ -12,9 +13,9 @@ class ResultScreen extends StatelessWidget {
 
   const ResultScreen({super.key, required this.plant, required this.imagePath});
 
-  void _share() {
+  String _buildShareText() {
     final cLabel = plant.confidence == 'high' ? 'Alta' : plant.confidence == 'medium' ? 'Media' : 'Baja';
-    final text = '''
+    return '''
 🌿 ${plant.name}
 🔬 ${plant.scientificName}
 📊 Confianza: $cLabel
@@ -26,8 +27,62 @@ ${plant.description}
 🌡 Temperatura: ${plant.care.temperature}
 
 Identificado con Plant Scanner 🌱
+https://plant-scanner-d8hg.onrender.com
 '''.trim();
-    Share.share(text, subject: 'Planta identificada: ${plant.name}');
+  }
+
+  void _share(BuildContext context) {
+    final text = _buildShareText();
+    if (kIsWeb) {
+      _showWebShareSheet(context, text);
+    } else {
+      Share.share(text, subject: 'Planta identificada: ${plant.name}');
+    }
+  }
+
+  void _showWebShareSheet(BuildContext context, String text) {
+    final encoded = Uri.encodeComponent(text);
+    final subject = Uri.encodeComponent('Planta identificada: ${plant.name}');
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('Compartir por...', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: const Color(0xFF25D366).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              ),
+              title: const Text('WhatsApp'),
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(Uri.parse('https://wa.me/?text=$encoded'), mode: LaunchMode.externalApplication);
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.email, color: Colors.blue),
+              ),
+              title: const Text('Correo electrónico'),
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(Uri.parse('mailto:?subject=$subject&body=$encoded'), mode: LaunchMode.externalApplication);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -48,13 +103,13 @@ Identificado con Plant Scanner 🌱
                 _card('Cuidados', Icons.spa, _care()),
                 const SizedBox(height: 12),
                 _toxicityCard(),
-                if (plant.tips.isNotEmpty) ...[const SizedBox(height: 12), _card('Tips', Icons.tips_and_updates, _tips())],
+                if (plant.tips.isNotEmpty) ...[const SizedBox(height: 12), _card('Consejos', Icons.tips_and_updates, _tips())],
                 if ((plant.wikipedia?.summary ?? '').isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _card('Wikipedia', Icons.menu_book, _wiki()),
                 ],
                 const SizedBox(height: 12),
-                _shareButton(),
+                _shareButton(context),
                 const SizedBox(height: 32),
               ]),
             ),
@@ -75,7 +130,7 @@ Identificado con Plant Scanner 🌱
         actions: [
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: _share,
+            onPressed: () => _share(context),
             tooltip: 'Compartir',
           ),
         ],
@@ -240,10 +295,10 @@ Identificado con Plant Scanner 🌱
             style: const TextStyle(fontSize: 13, height: 1.5), maxLines: 6, overflow: TextOverflow.ellipsis),
       ]);
 
-  Widget _shareButton() => SizedBox(
+  Widget _shareButton(BuildContext context) => SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: _share,
+          onPressed: () => _share(context),
           icon: const Icon(Icons.share),
           label: const Text('Compartir resultado'),
           style: ElevatedButton.styleFrom(

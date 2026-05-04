@@ -134,20 +134,21 @@ async def identify_plant(file: UploadFile = File(...)):
 async def _wikipedia(scientific_name: str):
     name = scientific_name.replace(" ", "_")
     async with httpx.AsyncClient(timeout=5.0) as c:
-        try:
-            r = await c.get(
-                f"https://en.wikipedia.org/api/rest_v1/page/summary/{name}",
-                headers={"User-Agent": "PlantScannerApp/1.0"},
-            )
-            if r.status_code == 200:
-                d = r.json()
-                return {
-                    "summary": d.get("extract", ""),
-                    "image": d.get("originalimage", {}).get("source", "") if d.get("originalimage") else "",
-                    "url": d.get("content_urls", {}).get("mobile", {}).get("page", ""),
-                }
-        except Exception:
-            pass
+        for lang in ["es", "en"]:
+            try:
+                r = await c.get(
+                    f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{name}",
+                    headers={"User-Agent": "PlantScannerApp/1.0"},
+                )
+                if r.status_code == 200:
+                    d = r.json()
+                    return {
+                        "summary": d.get("extract", ""),
+                        "image": d.get("originalimage", {}).get("source", "") if d.get("originalimage") else "",
+                        "url": d.get("content_urls", {}).get("mobile", {}).get("page", ""),
+                    }
+            except Exception:
+                continue
     return None
 
 
