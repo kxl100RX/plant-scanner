@@ -16,7 +16,7 @@ class PlantService {
       }
       return origin; // Production: same host serves the API
     }
-    return 'https://plant-scanner-api.onrender.com'; // APK production URL
+    return 'https://plant-scanner-d8hg.onrender.com'; // APK production URL
   }
 
   static Future<Plant> identify(XFile imageFile) async {
