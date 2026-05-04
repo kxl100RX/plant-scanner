@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/plant.dart';
+import '../utils/web_url.dart';
 
 class ResultScreen extends StatelessWidget {
   final Plant plant;
@@ -31,7 +32,58 @@ https://plant-scanner-d8hg.onrender.com
   }
 
   void _share(BuildContext context) {
-    Share.share(_buildShareText(), subject: 'Planta identificada: ${plant.name}');
+    final text = _buildShareText();
+    if (kIsWeb) {
+      _showWebShareSheet(context, text);
+    } else {
+      Share.share(text, subject: 'Planta identificada: ${plant.name}');
+    }
+  }
+
+  void _showWebShareSheet(BuildContext context, String text) {
+    final waText = Uri.encodeComponent(text);
+    final mailSubject = Uri.encodeComponent('Planta identificada: ${plant.name}');
+    final mailBody = Uri.encodeComponent(text);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('Compartir por...', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: const Color(0xFF25D366).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              ),
+              title: const Text('WhatsApp'),
+              onTap: () {
+                Navigator.pop(context);
+                navigateTo('whatsapp://send?text=$waText');
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.email, color: Colors.blue),
+              ),
+              title: const Text('Correo electrónico'),
+              onTap: () {
+                Navigator.pop(context);
+                navigateTo('mailto:?subject=$mailSubject&body=$mailBody');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override

@@ -109,6 +109,12 @@ async def identify_plant(file: UploadFile = File(...)):
     family = species.get("family", {}).get("scientificNameWithoutAuthor", "")
 
     wiki = await _wikipedia(scientific_name)
+
+    # Translate to Spanish when Wikipedia only has English content
+    if wiki and wiki.get("_lang") == "en":
+        wiki["summary"] = await _translate_es(wiki["summary"])
+    wiki_clean = {k: v for k, v in wiki.items() if not k.startswith("_")} if wiki else None
+
     description = (wiki or {}).get("summary", "") or f"{common_name} es una planta de la familia {family}."
     if len(description) > 600:
         description = description[:597] + "..."
@@ -127,7 +133,7 @@ async def identify_plant(file: UploadFile = File(...)):
             "Revisá las hojas regularmente para detectar plagas o enfermedades.",
             "Investigá los cuidados específicos de esta especie para obtener mejores resultados.",
         ],
-        "wikipedia": wiki,
+        "wikipedia": wiki_clean,
     }
 
 
@@ -146,10 +152,29 @@ async def _wikipedia(scientific_name: str):
                         "summary": d.get("extract", ""),
                         "image": d.get("originalimage", {}).get("source", "") if d.get("originalimage") else "",
                         "url": d.get("content_urls", {}).get("mobile", {}).get("page", ""),
+                        "_lang": lang,
                     }
             except Exception:
                 continue
     return None
+
+
+async def _translate_es(text: str) -> str:
+    if not text:
+        return text
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as c:
+            r = await c.get(
+                "https://api.mymemory.translated.net/get",
+                params={"q": text[:500], "langpair": "en|es", "de": "galeanofacal@gmail.com"},
+            )
+            if r.status_code == 200:
+                d = r.json()
+                if d.get("responseStatus") == 200:
+                    return d["responseData"]["translatedText"]
+    except Exception:
+        pass
+    return text
 
 
 @app.get("/health")
